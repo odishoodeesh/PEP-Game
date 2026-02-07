@@ -1,0 +1,5 @@
+{
+  "name": "PEP: Non-Euclidean Stability",
+  "description": "A minimalist, abstract 2D game where reality shifts based on difficulty. Navigate a shifting world to reach the Core Point while maintaining stability.",
+  "requestFramePermissions": []
+}
