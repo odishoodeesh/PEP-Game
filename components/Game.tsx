@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { 
   Difficulty, 
@@ -6,7 +5,7 @@ import {
   Hazard, 
   Wall, 
   Vector2D 
-} from '../types.ts';
+} from '../types';
 import { 
   CANVAS_WIDTH, 
   CANVAS_HEIGHT, 
@@ -16,7 +15,7 @@ import {
   WALLS, 
   HAZARDS, 
   THEME 
-} from '../constants.ts';
+} from '../constants';
 
 interface GameProps {
   difficulty: Difficulty;

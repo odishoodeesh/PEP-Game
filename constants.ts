@@ -1,5 +1,4 @@
-
-import { Wall, Hazard, Vector2D } from './types.ts';
+import { Wall, Hazard, Vector2D } from './types';
 
 export const CANVAS_WIDTH = 1200;
 export const CANVAS_HEIGHT = 800;

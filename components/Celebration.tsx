@@ -1,6 +1,5 @@
-
 import React, { useEffect, useRef } from 'react';
-import { THEME } from '../constants.ts';
+import { THEME } from '../constants';
 
 interface CelebrationProps {
   onRestart: () => void;
