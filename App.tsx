@@ -1,7 +1,7 @@
-
 import React, { useState, useCallback } from 'react';
 import Game from './components/Game.tsx';
 import Menu from './components/Menu.tsx';
+import AdUnit from './components/AdUnit.tsx';
 import { GameState, Difficulty } from './types.ts';
 
 const App: React.FC = () => {
@@ -46,7 +46,7 @@ const App: React.FC = () => {
       )}
 
       {(gameState === GameState.FAILED || gameState === GameState.COMPLETED) && (
-        <div className="z-40 text-center animate-in fade-in zoom-in duration-500">
+        <div className="z-40 text-center animate-in fade-in zoom-in duration-500 w-full max-w-2xl px-4">
           <h1 className={`text-7xl font-bold mb-8 tracking-tighter ${gameState === GameState.FAILED ? 'text-red-500' : 'text-cyan-400'}`}>
             {gameState === GameState.FAILED ? 'INSTABILITY CRITICAL' : 'PEP COMPLETE'}
           </h1>
@@ -55,7 +55,7 @@ const App: React.FC = () => {
               STABILIZED IN: {(completionTime / 1000).toFixed(2)}s
             </p>
           )}
-          <div className="flex gap-4 justify-center">
+          <div className="flex gap-4 justify-center mb-8">
             <button 
               onClick={() => startGame(difficulty)}
               className="px-8 py-3 bg-white text-black font-bold uppercase tracking-widest hover:bg-cyan-400 transition-colors"
@@ -69,6 +69,8 @@ const App: React.FC = () => {
               MAIN_TERMINAL
             </button>
           </div>
+          
+          <AdUnit />
         </div>
       )}
     </div>

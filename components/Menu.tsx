@@ -1,6 +1,6 @@
-
 import React from 'react';
 import { Difficulty } from '../types.ts';
+import AdUnit from './AdUnit.tsx';
 
 interface MenuProps {
   onStart: (difficulty: Difficulty) => void;
@@ -8,7 +8,7 @@ interface MenuProps {
 
 const Menu: React.FC<MenuProps> = ({ onStart }) => {
   return (
-    <div className="z-40 flex flex-col items-center max-w-2xl px-8">
+    <div className="z-40 flex flex-col items-center max-w-2xl px-8 w-full">
       <div className="mb-12 relative">
         <h1 className="text-9xl font-bold tracking-[0.2em] relative z-10">
           PEP
@@ -46,7 +46,11 @@ const Menu: React.FC<MenuProps> = ({ onStart }) => {
         </button>
       </div>
 
-      <div className="mt-16 text-[10px] tracking-[0.4em] opacity-30 font-mono flex flex-col items-center gap-2">
+      <div className="mt-8 w-full max-w-md">
+        <AdUnit />
+      </div>
+
+      <div className="mt-8 text-[10px] tracking-[0.4em] opacity-30 font-mono flex flex-col items-center gap-2">
         <span>MOVE: WASD / ARROWS</span>
         <span>ACTION: SPACE</span>
       </div>
