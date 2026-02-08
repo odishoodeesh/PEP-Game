@@ -1,8 +1,8 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
-import Game from './components/Game';
-import Menu from './components/Menu';
-import { GameState, Difficulty } from './types';
+import React, { useState, useCallback } from 'react';
+import Game from './components/Game.tsx';
+import Menu from './components/Menu.tsx';
+import { GameState, Difficulty } from './types.ts';
 
 const App: React.FC = () => {
   const [gameState, setGameState] = useState<GameState>(GameState.MENU);

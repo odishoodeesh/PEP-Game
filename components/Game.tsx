@@ -6,7 +6,7 @@ import {
   Hazard, 
   Wall, 
   Vector2D 
-} from '../types';
+} from '../types.ts';
 import { 
   CANVAS_WIDTH, 
   CANVAS_HEIGHT, 
@@ -16,7 +16,7 @@ import {
   WALLS, 
   HAZARDS, 
   THEME 
-} from '../constants';
+} from '../constants.ts';
 
 interface GameProps {
   difficulty: Difficulty;
@@ -26,11 +26,10 @@ interface GameProps {
 
 const Game: React.FC<GameProps> = ({ difficulty, onComplete, onFail }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const requestRef = useRef<number>();
+  const requestRef = useRef<number>(undefined);
   const startTimeRef = useRef<number>(Date.now());
   const [stability, setStability] = useState(INITIAL_STABILITY);
   
-  // Game State Refs (avoid re-renders during loop)
   const playerRef = useRef<Player>({
     pos: { ...START_POS },
     vel: { x: 0, y: 0 },
@@ -43,10 +42,9 @@ const Game: React.FC<GameProps> = ({ difficulty, onComplete, onFail }) => {
   const keysPressed = useRef<Record<string, boolean>>({});
   const cameraOffset = useRef<Vector2D>({ x: 0, y: 0 });
 
-  // Config based on difficulty
   const config = {
     speed: difficulty === Difficulty.EASY ? 0.6 : 0.9,
-    friction: difficulty === Difficulty.EASY ? 0.93 : 0.97, // Harder is more slippery
+    friction: difficulty === Difficulty.EASY ? 0.93 : 0.97,
     stabilityDrain: difficulty === Difficulty.EASY ? 0.05 : 0.15,
     cameraDrift: difficulty === Difficulty.HARD,
     misdirection: difficulty === Difficulty.HARD,
@@ -55,9 +53,8 @@ const Game: React.FC<GameProps> = ({ difficulty, onComplete, onFail }) => {
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     keysPressed.current[e.code] = true;
     if (e.code === 'Space') {
-      // Action logic
       if (difficulty === Difficulty.HARD) {
-        playerRef.current.stability -= 5; // Penalty for using action in hard mode poorly
+        playerRef.current.stability -= 5;
       }
     }
   }, [difficulty]);
@@ -78,7 +75,6 @@ const Game: React.FC<GameProps> = ({ difficulty, onComplete, onFail }) => {
   const update = useCallback(() => {
     const player = playerRef.current;
     
-    // Movement
     if (keysPressed.current['ArrowUp'] || keysPressed.current['KeyW']) player.vel.y -= config.speed;
     if (keysPressed.current['ArrowDown'] || keysPressed.current['KeyS']) player.vel.y += config.speed;
     if (keysPressed.current['ArrowLeft'] || keysPressed.current['KeyA']) player.vel.x -= config.speed;
@@ -90,13 +86,11 @@ const Game: React.FC<GameProps> = ({ difficulty, onComplete, onFail }) => {
     player.pos.x += player.vel.x;
     player.pos.y += player.vel.y;
 
-    // Hard Mode specific logic: Drain stability if standing still
     if (difficulty === Difficulty.HARD) {
       const speedSq = player.vel.x * player.vel.x + player.vel.y * player.vel.y;
       if (speedSq < 0.1) player.stability -= 0.1;
     }
 
-    // Wall Collision
     for (const wall of WALLS) {
       const p = player.pos;
       const s = player.size / 2;
@@ -104,7 +98,6 @@ const Game: React.FC<GameProps> = ({ difficulty, onComplete, onFail }) => {
       if (p.x + s > wall.x && p.x - s < wall.x + wall.w &&
           p.y + s > wall.y && p.y - s < wall.y + wall.h) {
         
-        // Simple AABB push out
         const dx = (p.x < wall.x + wall.w / 2) ? wall.x - (p.x + s) : (wall.x + wall.w) - (p.x - s);
         const dy = (p.y < wall.y + wall.h / 2) ? wall.y - (p.y + s) : (wall.y + wall.h) - (p.y - s);
 
@@ -118,7 +111,6 @@ const Game: React.FC<GameProps> = ({ difficulty, onComplete, onFail }) => {
       }
     }
 
-    // Hazard Logic & Collision
     for (const hazard of hazardsRef.current) {
       if (hazard.type === 'patrol') {
         hazard.pos.y += hazard.vel.y;
@@ -126,7 +118,6 @@ const Game: React.FC<GameProps> = ({ difficulty, onComplete, onFail }) => {
       }
       hazard.phase += 0.05;
 
-      // Collision
       const dx = player.pos.x - hazard.pos.x;
       const dy = player.pos.y - hazard.pos.y;
       const distSq = dx * dx + dy * dy;
@@ -140,17 +131,14 @@ const Game: React.FC<GameProps> = ({ difficulty, onComplete, onFail }) => {
       }
     }
 
-    // Drain Stability
     player.stability -= config.stabilityDrain;
     setStability(Math.max(0, Math.floor(player.stability)));
 
-    // Fail Condition
     if (player.stability <= 0) {
       onFail();
       return false;
     }
 
-    // Win Condition
     const dCoreX = player.pos.x - CORE_POINT.x;
     const dCoreY = player.pos.y - CORE_POINT.y;
     if (dCoreX * dCoreX + dCoreY * dCoreY < 40 * 40) {
@@ -158,7 +146,6 @@ const Game: React.FC<GameProps> = ({ difficulty, onComplete, onFail }) => {
       return false;
     }
 
-    // Camera Drift (Hard Mode)
     if (config.cameraDrift) {
       cameraOffset.current.x = Math.sin(Date.now() / 1000) * 10;
       cameraOffset.current.y = Math.cos(Date.now() / 1500) * 8;
@@ -173,17 +160,14 @@ const Game: React.FC<GameProps> = ({ difficulty, onComplete, onFail }) => {
     ctx.save();
     ctx.translate(cameraOffset.current.x, cameraOffset.current.y);
 
-    // Draw Walls
     ctx.fillStyle = THEME.wall;
     for (const wall of WALLS) {
       ctx.fillRect(wall.x, wall.y, wall.w, wall.h);
-      // Subtle edge glow
       ctx.strokeStyle = 'rgba(255,255,255,0.05)';
       ctx.lineWidth = 1;
       ctx.strokeRect(wall.x, wall.y, wall.w, wall.h);
     }
 
-    // Draw Core Point
     const time = Date.now() / 500;
     const corePulse = 20 + Math.sin(time) * 5;
     const grad = ctx.createRadialGradient(CORE_POINT.x, CORE_POINT.y, 0, CORE_POINT.x, CORE_POINT.y, 60);
@@ -199,7 +183,6 @@ const Game: React.FC<GameProps> = ({ difficulty, onComplete, onFail }) => {
     ctx.arc(CORE_POINT.x, CORE_POINT.y, 8, 0, Math.PI * 2);
     ctx.fill();
 
-    // Draw Hazards
     for (const hazard of hazardsRef.current) {
       const hPulse = hazard.type === 'pulse' ? Math.sin(hazard.phase) * 10 : 0;
       ctx.fillStyle = THEME.hazard;
@@ -208,7 +191,6 @@ const Game: React.FC<GameProps> = ({ difficulty, onComplete, onFail }) => {
       
       ctx.beginPath();
       if (difficulty === Difficulty.HARD && Math.random() > 0.98) {
-        // Visual misdirection in hard mode: glitchy rendering
         ctx.rect(hazard.pos.x - 20, hazard.pos.y - 20, 60, 2);
       } else {
         ctx.rect(
@@ -222,12 +204,10 @@ const Game: React.FC<GameProps> = ({ difficulty, onComplete, onFail }) => {
       ctx.shadowBlur = 0;
     }
 
-    // Draw Player
     const player = playerRef.current;
     ctx.save();
     ctx.translate(player.pos.x, player.pos.y);
     
-    // Stretch based on velocity
     const speed = Math.sqrt(player.vel.x * player.vel.x + player.vel.y * player.vel.y);
     const angle = Math.atan2(player.vel.y, player.vel.x);
     ctx.rotate(angle);
@@ -253,7 +233,6 @@ const Game: React.FC<GameProps> = ({ difficulty, onComplete, onFail }) => {
     ctx.restore();
     ctx.restore();
 
-    // HUD (Drawn outside camera transform)
     ctx.fillStyle = 'rgba(255,255,255,0.05)';
     ctx.fillRect(40, 40, 300, 10);
     ctx.fillStyle = stability > 30 ? THEME.player : THEME.hazard;
@@ -297,7 +276,6 @@ const Game: React.FC<GameProps> = ({ difficulty, onComplete, onFail }) => {
         className="max-w-full max-h-full shadow-2xl border border-white/5"
       />
       
-      {/* Decorative corners */}
       <div className="absolute top-10 left-10 w-4 h-4 border-t-2 border-l-2 border-white/20"></div>
       <div className="absolute top-10 right-10 w-4 h-4 border-t-2 border-r-2 border-white/20"></div>
       <div className="absolute bottom-10 left-10 w-4 h-4 border-b-2 border-l-2 border-white/20"></div>
