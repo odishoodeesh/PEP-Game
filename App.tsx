@@ -1,7 +1,9 @@
+
 import React, { useState, useCallback } from 'react';
 import Game from './components/Game.tsx';
 import Menu from './components/Menu.tsx';
 import AdUnit from './components/AdUnit.tsx';
+import Celebration from './components/Celebration.tsx';
 import { GameState, Difficulty } from './types.ts';
 
 const App: React.FC = () => {
@@ -45,16 +47,15 @@ const App: React.FC = () => {
         />
       )}
 
-      {(gameState === GameState.FAILED || gameState === GameState.COMPLETED) && (
+      {gameState === GameState.COMPLETED && completionTime !== null && (
+        <Celebration time={completionTime} onRestart={backToMenu} />
+      )}
+
+      {gameState === GameState.FAILED && (
         <div className="z-40 text-center animate-in fade-in zoom-in duration-500 w-full max-w-2xl px-4">
-          <h1 className={`text-7xl font-bold mb-8 tracking-tighter ${gameState === GameState.FAILED ? 'text-red-500' : 'text-cyan-400'}`}>
-            {gameState === GameState.FAILED ? 'INSTABILITY CRITICAL' : 'PEP COMPLETE'}
+          <h1 className="text-7xl font-bold mb-8 tracking-tighter text-red-500">
+            INSTABILITY CRITICAL
           </h1>
-          {completionTime !== null && (
-            <p className="text-2xl mb-8 font-mono opacity-80">
-              STABILIZED IN: {(completionTime / 1000).toFixed(2)}s
-            </p>
-          )}
           <div className="flex gap-4 justify-center mb-8">
             <button 
               onClick={() => startGame(difficulty)}

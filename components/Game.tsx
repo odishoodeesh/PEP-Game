@@ -75,22 +75,26 @@ const Game: React.FC<GameProps> = ({ difficulty, onComplete, onFail }) => {
   const update = useCallback(() => {
     const player = playerRef.current;
     
+    // Movement Input
     if (keysPressed.current['ArrowUp'] || keysPressed.current['KeyW']) player.vel.y -= config.speed;
     if (keysPressed.current['ArrowDown'] || keysPressed.current['KeyS']) player.vel.y += config.speed;
     if (keysPressed.current['ArrowLeft'] || keysPressed.current['KeyA']) player.vel.x -= config.speed;
     if (keysPressed.current['ArrowRight'] || keysPressed.current['KeyD']) player.vel.x += config.speed;
 
+    // Physics
     player.vel.x *= config.friction;
     player.vel.y *= config.friction;
 
     player.pos.x += player.vel.x;
     player.pos.y += player.vel.y;
 
+    // Hard Mode Penalties
     if (difficulty === Difficulty.HARD) {
       const speedSq = player.vel.x * player.vel.x + player.vel.y * player.vel.y;
       if (speedSq < 0.1) player.stability -= 0.1;
     }
 
+    // Wall Collisions
     for (const wall of WALLS) {
       const p = player.pos;
       const s = player.size / 2;
@@ -103,14 +107,15 @@ const Game: React.FC<GameProps> = ({ difficulty, onComplete, onFail }) => {
 
         if (Math.abs(dx) < Math.abs(dy)) {
           player.pos.x += dx;
-          player.vel.x = 0;
+          player.vel.x *= -0.2; // Small bounce
         } else {
           player.pos.y += dy;
-          player.vel.y = 0;
+          player.vel.y *= -0.2;
         }
       }
     }
 
+    // Hazard Logic & Collisions
     for (const hazard of hazardsRef.current) {
       if (hazard.type === 'patrol') {
         hazard.pos.y += hazard.vel.y;
@@ -121,34 +126,42 @@ const Game: React.FC<GameProps> = ({ difficulty, onComplete, onFail }) => {
       const dx = player.pos.x - hazard.pos.x;
       const dy = player.pos.y - hazard.pos.y;
       const distSq = dx * dx + dy * dy;
-      const threshold = (player.size + hazard.size.x) / 1.5;
+      
+      const hPulse = hazard.type === 'pulse' ? Math.sin(hazard.phase) * 10 : 0;
+      const threshold = (player.size / 2) + ((hazard.size.x + hPulse) / 2);
       
       if (distSq < threshold * threshold) {
-        player.stability -= 2;
-        player.isDistorted = true;
-      } else {
-        player.isDistorted = false;
+        // Immediate game over on touching red object
+        onFail();
+        return false;
       }
     }
 
+    // Passive Drain
     player.stability -= config.stabilityDrain;
     setStability(Math.max(0, Math.floor(player.stability)));
 
+    // Fail Condition (Stability)
     if (player.stability <= 0) {
       onFail();
       return false;
     }
 
+    // Win Condition
     const dCoreX = player.pos.x - CORE_POINT.x;
     const dCoreY = player.pos.y - CORE_POINT.y;
-    if (dCoreX * dCoreX + dCoreY * dCoreY < 40 * 40) {
+    if (dCoreX * dCoreX + dCoreY * dCoreY < 45 * 45) {
       onComplete(Date.now() - startTimeRef.current);
       return false;
     }
 
+    // Camera Effects
     if (config.cameraDrift) {
-      cameraOffset.current.x = Math.sin(Date.now() / 1000) * 10;
-      cameraOffset.current.y = Math.cos(Date.now() / 1500) * 8;
+      cameraOffset.current.x = (cameraOffset.current.x * 0.9) + Math.sin(Date.now() / 1000) * 5;
+      cameraOffset.current.y = (cameraOffset.current.y * 0.9) + Math.cos(Date.now() / 1500) * 4;
+    } else {
+      cameraOffset.current.x *= 0.8;
+      cameraOffset.current.y *= 0.8;
     }
 
     return true;
@@ -160,6 +173,7 @@ const Game: React.FC<GameProps> = ({ difficulty, onComplete, onFail }) => {
     ctx.save();
     ctx.translate(cameraOffset.current.x, cameraOffset.current.y);
 
+    // Draw Walls
     ctx.fillStyle = THEME.wall;
     for (const wall of WALLS) {
       ctx.fillRect(wall.x, wall.y, wall.w, wall.h);
@@ -168,21 +182,27 @@ const Game: React.FC<GameProps> = ({ difficulty, onComplete, onFail }) => {
       ctx.strokeRect(wall.x, wall.y, wall.w, wall.h);
     }
 
+    // Draw Core
     const time = Date.now() / 500;
     const corePulse = 20 + Math.sin(time) * 5;
-    const grad = ctx.createRadialGradient(CORE_POINT.x, CORE_POINT.y, 0, CORE_POINT.x, CORE_POINT.y, 60);
+    const grad = ctx.createRadialGradient(CORE_POINT.x, CORE_POINT.y, 0, CORE_POINT.x, CORE_POINT.y, 70);
     grad.addColorStop(0, THEME.core);
+    grad.addColorStop(0.5, THEME.core + '44');
     grad.addColorStop(1, 'transparent');
     ctx.fillStyle = grad;
     ctx.beginPath();
-    ctx.arc(CORE_POINT.x, CORE_POINT.y, corePulse + 15, 0, Math.PI * 2);
+    ctx.arc(CORE_POINT.x, CORE_POINT.y, corePulse + 30, 0, Math.PI * 2);
     ctx.fill();
     
     ctx.fillStyle = '#FFF';
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = '#FFF';
     ctx.beginPath();
     ctx.arc(CORE_POINT.x, CORE_POINT.y, 8, 0, Math.PI * 2);
     ctx.fill();
+    ctx.shadowBlur = 0;
 
+    // Draw Hazards
     for (const hazard of hazardsRef.current) {
       const hPulse = hazard.type === 'pulse' ? Math.sin(hazard.phase) * 10 : 0;
       ctx.fillStyle = THEME.hazard;
@@ -191,19 +211,17 @@ const Game: React.FC<GameProps> = ({ difficulty, onComplete, onFail }) => {
       
       ctx.beginPath();
       if (difficulty === Difficulty.HARD && Math.random() > 0.98) {
-        ctx.rect(hazard.pos.x - 20, hazard.pos.y - 20, 60, 2);
+        ctx.rect(hazard.pos.x - 40, hazard.pos.y, 80, 1);
       } else {
-        ctx.rect(
-          hazard.pos.x - (hazard.size.x + hPulse) / 2, 
-          hazard.pos.y - (hazard.size.y + hPulse) / 2, 
-          hazard.size.x + hPulse, 
-          hazard.size.y + hPulse
-        );
+        const szX = hazard.size.x + hPulse;
+        const szY = hazard.size.y + hPulse;
+        ctx.rect(hazard.pos.x - szX / 2, hazard.pos.y - szY / 2, szX, szY);
       }
       ctx.fill();
       ctx.shadowBlur = 0;
     }
 
+    // Draw Player
     const player = playerRef.current;
     ctx.save();
     ctx.translate(player.pos.x, player.pos.y);
@@ -212,20 +230,13 @@ const Game: React.FC<GameProps> = ({ difficulty, onComplete, onFail }) => {
     const angle = Math.atan2(player.vel.y, player.vel.x);
     ctx.rotate(angle);
     
-    const stretchX = 1 + speed * 0.05;
+    const stretchX = 1 + speed * 0.08;
     const stretchY = 1 / stretchX;
-    
     ctx.scale(stretchX, stretchY);
 
-    if (player.isDistorted) {
-      ctx.fillStyle = '#FFF';
-      ctx.filter = 'blur(4px)';
-    } else {
-      ctx.fillStyle = THEME.player;
-      ctx.shadowBlur = 20;
-      ctx.shadowColor = THEME.player;
-    }
-
+    ctx.fillStyle = THEME.player;
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = THEME.player;
     ctx.beginPath();
     ctx.arc(0, 0, player.size / 2, 0, Math.PI * 2);
     ctx.fill();
@@ -233,9 +244,18 @@ const Game: React.FC<GameProps> = ({ difficulty, onComplete, onFail }) => {
     ctx.restore();
     ctx.restore();
 
+    // UI Overlay
     ctx.fillStyle = 'rgba(255,255,255,0.05)';
     ctx.fillRect(40, 40, 300, 10);
-    ctx.fillStyle = stability > 30 ? THEME.player : THEME.hazard;
+    
+    if (stability < 25) {
+      ctx.fillStyle = Math.sin(Date.now() / 100) > 0 ? THEME.hazard : '#FFF';
+    } else if (stability < 50) {
+      ctx.fillStyle = '#FFA500';
+    } else {
+      ctx.fillStyle = THEME.player;
+    }
+    
     ctx.fillRect(40, 40, (stability / INITIAL_STABILITY) * 300, 10);
     
     ctx.font = 'bold 12px JetBrains Mono';
@@ -243,8 +263,11 @@ const Game: React.FC<GameProps> = ({ difficulty, onComplete, onFail }) => {
     ctx.fillText('STABILITY_CORE', 40, 30);
     ctx.fillText(`${stability}%`, 310, 30);
     
+    ctx.font = '10px JetBrains Mono';
+    ctx.globalAlpha = 0.5;
     ctx.fillText(`MODE: ${difficulty}`, 40, 70);
-    ctx.fillText(`COORD: ${Math.floor(player.pos.x)},${Math.floor(player.pos.y)}`, 40, 90);
+    ctx.fillText(`COORD: ${Math.floor(player.pos.x)},${Math.floor(player.pos.y)}`, 40, 85);
+    ctx.globalAlpha = 1.0;
 
   }, [difficulty, stability]);
 
@@ -276,6 +299,7 @@ const Game: React.FC<GameProps> = ({ difficulty, onComplete, onFail }) => {
         className="max-w-full max-h-full shadow-2xl border border-white/5"
       />
       
+      {/* HUD Accents */}
       <div className="absolute top-10 left-10 w-4 h-4 border-t-2 border-l-2 border-white/20"></div>
       <div className="absolute top-10 right-10 w-4 h-4 border-t-2 border-r-2 border-white/20"></div>
       <div className="absolute bottom-10 left-10 w-4 h-4 border-b-2 border-l-2 border-white/20"></div>
