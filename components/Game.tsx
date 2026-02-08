@@ -5,7 +5,7 @@ import {
   Hazard, 
   Wall, 
   Vector2D 
-} from '../types';
+} from '../types.ts';
 import { 
   CANVAS_WIDTH, 
   CANVAS_HEIGHT, 
@@ -15,7 +15,7 @@ import {
   WALLS, 
   HAZARDS, 
   THEME 
-} from '../constants';
+} from '../constants.ts';
 
 interface GameProps {
   difficulty: Difficulty;

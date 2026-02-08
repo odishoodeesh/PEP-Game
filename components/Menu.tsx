@@ -1,6 +1,6 @@
 import React from 'react';
-import { Difficulty } from '../types';
-import AdUnit from './AdUnit';
+import { Difficulty } from '../types.ts';
+import AdUnit from './AdUnit.tsx';
 
 interface MenuProps {
   onStart: (difficulty: Difficulty) => void;
